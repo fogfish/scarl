@@ -18,70 +18,88 @@
 package scarl
 
 import akka.actor.{ActorRef, Props, ActorSystem}
+import com.ericsson.otp.erlang.OtpErlangPid
+
+
+/** distribution listener interface specification
+  *
+  */
+case class Listener(
+  /** hostname or ip address to bind the distribution listener */
+  host: String = "127.0.0.1",
+
+  /** a magic cookie as defined by Erlang distribution */
+  cookie: String = "nocookie"
+)
+
+/** base messaging data structures
+  *
+  */
+abstract class Ref
+case class PidRef(pid: OtpErlangPid) extends Ref
+case class SysRef(pid: String, node: String) extends Ref
+
+abstract class Message
+case class Ingress(message: Any) extends Message
+case class Egress(pid: Ref, message: Message) extends Message
 
 
 object Scarl {
-  val uid    = "scarl"
-  val host   = "127.0.0.1"
-  val cookie = "nocookie"
+  /** application id */
+  val uid  = "scarl"
 
-  /**
-    * start application
+  /** start scarl application, create default node with give name.
+    * it returns reference to root supervisor
     *
-    * @param node
-    * @param sys
+    * @param node default node name
+    * @param dist distribution listener interface specification
     * @return
     */
-  def apply(node: String)(implicit sys: ActorSystem) = {
-    sys.actorOf(Props(new Supervisor(node, host, cookie)), uid)
+  def apply(node: String, dist: Listener = Listener())(implicit sys: ActorSystem): ActorRef = {
+    sys.actorOf(Props(new Supervisor(node, dist)), uid)
   }
 
-  def apply(node: String, cookie: String)(implicit sys: ActorSystem) = {
-    sys.actorOf(Props(new Supervisor(node, host, cookie)), uid)
-  }
 
-  def apply(node: String, host: String, cookie: String)(implicit sys: ActorSystem) = {
-    sys.actorOf(Props(new Supervisor(node, host, cookie)), uid)
-  }
-
-  /**
-    * spawn new node
+  /** spawn new node on existing interface
     *
-    * @param node
-    * @param cookie
-    * @param sys
+    * @param node locally unique node name
+    * @param sys implicit reference to actor system
     * @return
     */
   def spawn(node: String)(implicit sys: ActorSystem) = {
-    Supervisor.spawn(node, cookie)
+    Supervisor.spawn(node)
   }
 
-  def spawn(node: String, cookie: String)(implicit sys: ActorSystem) = {
-    Supervisor.spawn(node, cookie)
-  }
 
-  /**
-    * bind actor to external mailbox
+  /** bind actor to external mailbox on default node
     *
-    * @param node
-    * @param mbox
-    * @param actor
-    * @param sys
+    * @param mbox unique mailbox name, the name is used as process address to send a message
+    * @param actor either ref to existed actor of lambda expression
+    * @param sys implicit reference to actor system
     * @return
     */
   def bind(mbox: String, actor: ActorRef)(implicit sys: ActorSystem): ActorRef = {
     NodeSup.bind("default", mbox, actor)
   }
 
-  def bind(mbox: String, actor: Any => Any)(implicit sys: ActorSystem): ActorRef = {
+  def bind(mbox: String, actor: Any => Option[Egress])(implicit sys: ActorSystem): ActorRef = {
     NodeSup.bind("default", mbox, actor)
   }
 
+  /** bind actor to external mailbox on defined node
+    *
+    * @param node node name
+    * @param mbox mbox unique mailbox name
+    * @param actor either ref to existed actor of lambda expression
+    * @param sys implicit reference to actor system
+    * @return
+    */
   def bind(node: String, mbox: String, actor: ActorRef)(implicit sys: ActorSystem): ActorRef = {
     NodeSup.bind(node, mbox, actor)
   }
 
-  def bind(node: String, mbox: String, actor: Any => Any)(implicit sys: ActorSystem): ActorRef = {
+  def bind(node: String, mbox: String, actor: Any => Option[Egress])(implicit sys: ActorSystem): ActorRef = {
     NodeSup.bind(node, mbox, actor)
   }
+
 }

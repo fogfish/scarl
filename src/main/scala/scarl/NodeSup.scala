@@ -40,7 +40,7 @@ class NodeSup(id: String, cookie: String) extends Actor {
   def receive = {
     case ('bind, mbox: String, actor: ActorRef) =>
       sender() ! context.actorOf(Props(new Bridge(node, mbox, actor)))
-    case ('bind, mbox: String, actor: (Any => Any)) =>
+    case ('bind, mbox: String, actor: (Any => Option[Egress])) =>
       sender() ! context.actorOf(Props(new Functor(node, mbox, actor)))
   }
 }
@@ -53,9 +53,10 @@ object NodeSup {
 
   implicit val timeout = Timeout(5 seconds)
 
+
   def bind(node: String, name: String, actor: Any)(implicit sys: ActorSystem): ActorRef = {
     implicit val cx = sys.dispatcher
-    val req = sys.actorSelection("/user/scarl/" + node)
+    val req = sys.actorSelection("/user/" + Scarl.uid + "/" + node)
       .resolveOne
       .flatMap {
         sup: ActorRef => {
