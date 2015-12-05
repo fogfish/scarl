@@ -13,8 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-// @description
-//  Erlang to Scala/Akka binding
 package scarl
 
 import akka.actor.{ActorRef, Props, ActorSystem}
@@ -32,21 +30,32 @@ case class Listener(
   cookie: String = "nocookie"
 )
 
-/** base messaging data structures
-  *
-  */
-abstract class Ref
-case class PidRef(pid: OtpErlangPid) extends Ref
-case class SysRef(pid: String, node: String) extends Ref
-
-abstract class Message
-case class Ingress(message: Any) extends Message
-case class Egress(pid: Ref, message: Message) extends Message
-
 
 object Scarl {
   /** application id */
   val uid  = "scarl"
+
+
+  /** the Scala system can communicate with any remote Erlang process using
+    * either direct process reference (pid) or abstarct name (aka akka path)
+    * The direct reference is type of OtpErlangPid, the abstract name is
+    * tuple of (String, String). The wired data are tuples, and the tuple structure
+    * is application protocol outside of scarl implementation (it is a messanger)
+    *
+    * The library uses concept of Envelope to express communication intent.
+    * Envelop contains the destination address and message. The union type is required to
+    * model the message destination [OtpErlangPid or (String, String)]
+    * The Curry-Howard isomorphism is elegant solution on union type
+    * https://issues.scala-lang.org/browse/SI-3749
+    * http://milessabin.com/blog/2011/06/09/scala-union-types-curry-howard/
+    */
+  type \[A]  = A => Nothing
+  type v[A, B] = \[\[A] with \[B]]
+  type \\[A] = \[\[A]]
+  type u[A, B] = { type E[X] = \\[X] <:< (A v B) }
+
+  abstract class Envelop
+  case class Egress(to: Any, message: Any) extends Envelop
 
   /** start scarl application, create default node with give name.
     * it returns reference to root supervisor
@@ -82,7 +91,7 @@ object Scarl {
     NodeSup.bind("default", mbox, actor)
   }
 
-  def bind(mbox: String, actor: Any => Option[Egress])(implicit sys: ActorSystem): ActorRef = {
+  def bind(mbox: String, actor: Any => Option[Envelop])(implicit sys: ActorSystem): ActorRef = {
     NodeSup.bind("default", mbox, actor)
   }
 
@@ -98,8 +107,19 @@ object Scarl {
     NodeSup.bind(node, mbox, actor)
   }
 
-  def bind(node: String, mbox: String, actor: Any => Option[Egress])(implicit sys: ActorSystem): ActorRef = {
+  def bind(node: String, mbox: String, actor: Any => Option[Envelop])(implicit sys: ActorSystem): ActorRef = {
     NodeSup.bind(node, mbox, actor)
+  }
+
+  /** build envelop
+    *
+    * @param to destination address
+    * @param message communication message
+    * @tparam T either OptErlangPid or (String, String) process identity
+    * @return
+    */
+  def envelop[T: (OtpErlangPid u (String, String))#E](to: T, message: Any) = {
+    Some(Egress(to, message))
   }
 
 }

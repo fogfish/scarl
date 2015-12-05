@@ -13,12 +13,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-// @description
-//
 package scarl
 
 import akka.actor.{ActorRef, Actor}
 import com.ericsson.otp.erlang._
+import scarl.Scarl.Envelop
 
 class Bridge(node: OtpNode, name: String, actor: ActorRef)
   extends Actor
@@ -28,16 +27,16 @@ class Bridge(node: OtpNode, name: String, actor: ActorRef)
   val mbox: OtpMbox = node.createMbox(name)
 
   override def preStart() = {
-    self ! 'run
+    self ! 'recv
   }
 
   def receive = {
-    case 'run =>
+    case 'recv =>
       recv(self)
-    case x: Ingress =>
-      actor ! x
+    case message: OtpErlangObject =>
+      actor ! decode(message)
       recv(self)
-    case x: Egress =>
+    case x: Envelop =>
       send(x)
     case _ =>
 

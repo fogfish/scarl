@@ -17,6 +17,7 @@ package scarl
 
 import akka.actor.ActorRef
 import akka.pattern.pipe
+import scarl.Scarl.{Egress, Envelop}
 import scala.concurrent.{ExecutionContext, Future}
 import com.ericsson.otp.erlang._
 
@@ -33,11 +34,7 @@ trait Mailbox {
     */
   def recv(actor: ActorRef) = {
     pipe(Future {
-      Ingress(
-        decode(
-          mbox.receive()
-        )
-      )
+      mbox.receive()
     }) to actor
   }
 
@@ -45,11 +42,12 @@ trait Mailbox {
     *
     * @param x
     */
-  def send(x: Egress) = x match {
-    case Egress(to: PidRef, msg: Any) =>
-      mbox.send(to.pid, encode(msg))
-    case Egress(to: SysRef, msg: Any) =>
-      mbox.send(to.pid, to.node, encode(msg))
+  def send(x: Envelop) = x match {
+    case Egress(to: OtpErlangPid, message: Any) =>
+      mbox.send(to, encode(message))
+
+    case Egress((name: String, node: String), message: Any) =>
+      mbox.send(name, node, encode(message))
   }
 
   /** decode Erlang/OTP data structure to Scala native
@@ -57,7 +55,7 @@ trait Mailbox {
     * @param x
     * @return
     */
-  private def decode(x: OtpErlangObject): Any = x match {
+  def decode(x: OtpErlangObject): Any = x match {
     case x: OtpErlangAtom =>
       Symbol(x.atomValue())
 
@@ -111,7 +109,7 @@ trait Mailbox {
     * @param x
     * @return
     */
-  private def encode(x: Any): OtpErlangObject = x match {
+  def encode(x: Any): OtpErlangObject = x match {
     case x: Symbol =>
       new OtpErlangAtom(x.name)
 

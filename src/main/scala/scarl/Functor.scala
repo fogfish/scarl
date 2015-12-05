@@ -19,8 +19,9 @@ package scarl
 
 import akka.actor.Actor
 import com.ericsson.otp.erlang._
+import scarl.Scarl.Envelop
 
-class Functor[A, B](node: OtpNode, name: String, actor: Any => Option[Egress])
+class Functor[A, B](node: OtpNode, name: String, actor: Any => Option[Envelop])
   extends Actor
   with Mailbox {
 
@@ -28,15 +29,15 @@ class Functor[A, B](node: OtpNode, name: String, actor: Any => Option[Egress])
   val mbox: OtpMbox = node.createMbox(name)
 
   override def preStart() = {
-    self ! 'run
+    self ! 'recv
   }
 
   def receive = {
-    case 'run =>
+    case 'recv =>
       recv(self)
 
-    case x: Ingress =>
-      actor(x.message) map {send(_)}
+    case message: OtpErlangObject =>
+      actor(decode(message)) map {send(_)}
       recv(self)
 
     case _ =>
