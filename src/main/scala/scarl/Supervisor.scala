@@ -22,7 +22,7 @@ import akka.util.Timeout
 
 import scala.concurrent.Await
 
-class Supervisor(node: String, host: String, cookie: String) extends Actor {
+class Supervisor(node: String, dist: Listener) extends Actor {
   import akka.actor.{OneForOneStrategy, Props}
   import akka.actor.SupervisorStrategy._
   import scala.concurrent.duration._
@@ -33,18 +33,16 @@ class Supervisor(node: String, host: String, cookie: String) extends Actor {
     }
 
   override def preStart() = {
-    spawn("default", node, cookie)
+    spawn("default", node)
   }
 
   def receive = {
-    case ('spawn, id: String, cookie: String) =>
-      sender() ! spawn(id, id, cookie)
     case ('spawn, id: String) =>
-      sender() ! spawn(id, id, cookie)
+      sender() ! spawn(id, id)
   }
 
-  private def spawn(name: String, id: String, cookie: String) = {
-    context.actorOf(Props(new NodeSup(id + "@" + host, cookie)), name)
+  private def spawn(name: String, id: String) = {
+    context.actorOf(Props(new NodeSup(id + "@" + dist.host, dist.cookie)), name)
   }
 }
 
@@ -54,13 +52,13 @@ object Supervisor {
   import scala.concurrent.duration._
   implicit val timeout = Timeout(5 seconds)
 
-  def spawn(id: String, cookie: String)(implicit sys: ActorSystem): ActorRef = {
+  def spawn(id: String)(implicit sys: ActorSystem): ActorRef = {
     implicit val cx = sys.dispatcher
-    val req = sys.actorSelection("/user/scarl")
+    val req = sys.actorSelection("/user/" + Scarl.uid)
       .resolveOne
       .flatMap {
         sup: ActorRef => {
-          ask(sup, ('spawn, id, cookie)).mapTo[ActorRef]
+          ask(sup, ('spawn, id)).mapTo[ActorRef]
         }
       }
     Await.result(req, timeout.duration)

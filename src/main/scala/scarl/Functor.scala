@@ -17,49 +17,31 @@
 //
 package scarl
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.Actor
-import akka.pattern.pipe
 import com.ericsson.otp.erlang._
+import scarl.Scarl.Envelop
 
-import scala.concurrent.Future
-import scala.concurrent.duration.Duration
+class Functor[A, B](node: OtpNode, name: String, actor: Any => Option[Envelop])
+  extends Actor
+  with Mailbox {
 
-class Functor(node: OtpNode, name: String, actor: Any => Any) extends Actor with Message {
-  implicit val cx   = context.system.dispatcher
-  var mbox: OtpMbox = _
+  implicit val exec = context.system.dispatcher
+  val mbox: OtpMbox = node.createMbox(name)
 
   override def preStart() = {
-    mbox = node.createMbox(name)
-    context.system
-      .scheduler
-      .scheduleOnce(
-        Duration.create(0, TimeUnit.SECONDS),
-        context.self,
-        'run
-      )(context.system.dispatcher)
+    self ! 'recv
   }
 
   def receive = {
-    case 'run =>
-      recv()
-    case msg: OtpErlangObject =>
-      actor.apply(decode(msg)) match {
-        case ('send, to: OtpErlangPid, msg: Any) =>
-          mbox.send(to, encode(msg))
-        case ('send, to: String, node: String, msg: Any) =>
-          mbox.send(to, node, encode(msg))
-        case _ =>
+    case 'recv =>
+      recv(self)
 
-      }
-      recv()
-  }
+    case message: OtpErlangObject =>
+      actor(decode(message)) map {send(_)}
+      recv(self)
 
-  def recv() = {
-    pipe(Future {
-      mbox.receive()
-    }) to self
+    case _ =>
+
   }
 
 }

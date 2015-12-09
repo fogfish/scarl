@@ -33,11 +33,21 @@ and associated to implicit mailbox is used to receive messages. The library defi
    
    //
    // spawn scarl application and creates default node scala@127.0.0.1
-   scarl.Scarl("scala", "127.0.0.1", "nocookie")
+   scarl.Scarl("scala", scarl.Listener(host="127.0.0.1", cookie="nocookie"))
    
    //
    // binds lambda expression to mailbox 'inbox
    // Erlang can send message using {inbox, 'scala@127.0.0.1'} ! hello. 
-   scarl.Scarl.bind("inbox", (x: Any) => println(x))
+    scarl.Scarl.bind("inbox", (x: Any) => {println(x); None})
+   
+   //
+   // ping - pong example
+   // Erlang can send message using {ping, 'scala@127.0.0.1'} ! {self(), "text"}.
+   scarl.Scarl.bind("ping", 
+      (x: Any) => x match {
+         case (ref: com.ericsson.otp.erlang.OtpErlangPid, text: String) =>
+            scarl.Scarl.envelop(ref, text)
+      }
+   )
    
 ```
