@@ -7,7 +7,7 @@
 >   - http://starwars.wikia.com/wiki/Scarl_system
 > 
 
-`Scarl` is the binding layer between Erlang and Scala/Akka universes. The library implements message bridge using Erlang distribution protocol, see [jinterface](http://www.erlang.org/doc/apps/jinterface/jinterface_users_guide.html) for details.
+`Scarl` is the binding layer between Erlang and Scala/Akka universes. The library implements message bridge using Erlang distribution protocol and it is based on [jinterface](http://www.erlang.org/doc/apps/jinterface/jinterface_users_guide.html) for details.
 
 The project is targeted for Scala and Erlang developers who builds a distributed systems using Actor techniques provided by these environments.
 
@@ -29,7 +29,7 @@ The development of distributed system is a complex subject. Usually, it require 
 
 ## getting scarl
 
-The project is Scala library, its latest version is available from `master` branch.  All development, including new features and bug fixes, take place on master branch using forking and pull requests as described in [contribution guideline](docs/contribution.md). The usage and development requires [Scala](http://www.scala-lang.org) and [sbt](http://www.scala-sbt.org). 
+The project is Scala library, its latest version is available from `master` branch.  All development, including new features and bug fixes, take place on master branch using forking and pull requests as described in [contribution guideline](doc/contribution.md). The usage and development requires [Scala](http://www.scala-lang.org) and [sbt](http://www.scala-sbt.org). 
 
 
 ## running scarl
