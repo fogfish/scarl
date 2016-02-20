@@ -27,12 +27,12 @@ The development of distributed system is a complex subject. Usually, it require 
 ## getting started
 
 
-## getting scarl
+### getting scarl
 
 The project is Scala library, its latest version is available from `master` branch.  All development, including new features and bug fixes, take place on master branch using forking and pull requests as described in [contribution guideline](doc/contribution.md). The usage and development requires [Scala](http://www.scala-lang.org) and [sbt](http://www.scala-sbt.org). 
 
 
-## running scarl
+### running scarl
 
 You can experiment `scarl` and message passing between Scala to Erlang actors in development console. It requires [Erlang/OTP](http://www.erlang.org/downloads) version 18.0 or later.
 
@@ -91,7 +91,7 @@ ok
 ```
 
 
-## deploying scarl
+### deploying scarl
 
 The library is not integrated yet into open-source project repository. It requires a manual assembly and publish at local environment.
 ```
