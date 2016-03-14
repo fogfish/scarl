@@ -1,35 +1,32 @@
-# scarl
+# Scarl
 
-> 
+>
 > "The historical records will claim that the Rebel Alliance was born on Corellia.
 > That is a documented fact. But the truth is this: The Rebel Alliance was born 
 > somewhere in the Scarl system aboard Darth Vader's personal starship, the Executor."
->   - http://starwars.wikia.com/wiki/Scarl_system
+>   - [Star Wars' Scarl system](http://starwars.wikia.com/wiki/Scarl_system)
 > 
 
-`Scarl` is the binding layer between Erlang and Scala/Akka universes. The library implements message bridge using Erlang distribution protocol and it is based on [jinterface](http://www.erlang.org/doc/apps/jinterface/jinterface_users_guide.html) for details.
+The Scarl library acts as a binding layer to connect the Erlang and Scala/Akka universes. It's made for Scala and Erlang developers who build distributed systems using the Actors provided by these languages. Scarl uses Erlang's distribution protocol to implement message bridging and is based on [jinterface](http://www.erlang.org/doc/apps/jinterface/jinterface_users_guide.html).
 
-The project is targeted for Scala and Erlang developers who builds a distributed systems using Actor techniques provided by these environments.
+Scarl assumes that your distributed system is built from nodes. Each node maintains a peer-to-peer connection with neighboring peers. The chapter [Distributed Erlang](http://erlang.org/doc/reference_manual/distributed.html) provides a comprehensive description on network topology. 
 
-The library assumes that distributed system is built from nodes. Each node maintains peer-to-peer 
-connection to neighbor peers. The chapter [Distributed Erlang](http://erlang.org/doc/reference_manual/distributed.html) provides comprehensive description on the network topology. The `scarl` application is spawned with actor system using `scarl.Scarl(...)` primitive. It spawns automatically default node with given name. The message recipients are identified by registered names. The name is unique within the node
-and associated to implicit mailbox is used to receive messages. The library defines a bind primitives
-`scarl.Scarl.bind(...)` to associate either Akka actor of lambda expression with mailbox. 
+You can use the `scarl.Scarl(...)` primitive to spawn the `scarl` application with the actor system, and/or to automatically spawn a default node with a given name. Registered names identify message recipients. These registered names are unique within the node and associated to the implicit mailbox used to receive messages. Scarl defines a bind primitives, `scarl.Scarl.bind(...)`, to associate either Akka actor of a Lambda expression with the implicit mailbox. 
 
 
+## Inspiration
 
-## inspiration
+Developing distributed systems usually requires  software management layers that provide concurrency, job scheduling, request marshaling, message routing, membership, failure detection and recovery. Erlang/OTP is an indispensable technology to solve these problem. Its run-time, distribution, supervisor and fault-tolerance frameworks gives all necessary means to address listed problem. This library allows to reuse distribution assets proven by time in Scala projects.
 
-The development of distributed system is a complex subject. Usually, it require variety of software management layers that provides concurrency, job scheduling, request marshaling, message routing, membership, failure detection and recovery. Erlang/OTP is an indispensable technology to solve these problem. Its run-time, distribution, supervisor and fault-tolerance frameworks gives all necessary means to address listed problem. This library allows to reuse distribution assets proven by time in Scala projects.
+## Getting Started
+###Requirements
+To use and develop Scarl, you need:
+- [Scala](http://www.scala-lang.org)
+- [sbt](http://www.scala-sbt.org). 
 
+### Getting Scarl
 
-
-## getting started
-
-
-### getting scarl
-
-The project is Scala library, its latest version is available from `master` branch.  All development, including new features and bug fixes, take place on master branch using forking and pull requests as described in [contribution guideline](doc/contribution.md). The usage and development requires [Scala](http://www.scala-lang.org) and [sbt](http://www.scala-sbt.org). 
+The project is a Scala library, its latest version is available from `master` branch.  All development, including new features and bug fixes, take place on master branch using forking and pull requests as described in [contribution guideline](doc/contribution.md). 
 
 
 ### running scarl
