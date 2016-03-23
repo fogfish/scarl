@@ -1,10 +1,10 @@
-# how to raise an issue
+# How to File a Bug Report/Raise an Issue
 
-If you experience any issue with the project, please let us know using [github issue](https://github.com/zalando/scarl/issue). We appreciate detailed and accurate reports that helps us to identity and replicate the issue. 
+If you experience any issues with Scarl, please let us know via [GitHub issues](https://github.com/zalando/scarl/issue). We appreciate detailed and accurate reports that help us to identity and replicate the issue. 
 
-* **specify** configuration of your environment, what operating system, version of runtime environments are used. 
+* **Specify** the configuration of your environment. Include which operating system you use and the versions of runtime environments. 
 
-* **attach** possible logs, screen shots or exception experienced by you.
+* **Attach** logs, screenshots and exceptions, in possible.
 
-* **reveal** the steps to reproduce the problem.
+* **Reveal** the steps you took to reproduce the problem.
 
