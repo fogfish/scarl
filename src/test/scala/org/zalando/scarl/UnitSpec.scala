@@ -1,4 +1,4 @@
-package scarl
+package org.zalando.scarl
 
 import org.scalatest._
 

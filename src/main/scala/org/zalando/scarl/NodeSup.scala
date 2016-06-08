@@ -15,7 +15,7 @@
 //
 // @doc
 //
-package scarl
+package org.zalando.scarl
 
 import akka.actor.{ActorSystem, ActorRef, Actor}
 import akka.util.Timeout

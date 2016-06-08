@@ -13,7 +13,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-package scarl
+package org.zalando.scarl
 
 import akka.actor.{ActorRef, Actor}
 import com.ericsson.otp.erlang._

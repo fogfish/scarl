@@ -15,16 +15,17 @@
 //
 // @description
 //  application root supervisor
-package scarl
+package org.zalando.scarl
 
-import akka.actor.{ActorSystem, ActorRef, Actor}
+import akka.actor.{Actor, ActorRef, ActorSystem}
 import akka.util.Timeout
 
 import scala.concurrent.Await
 
 class Supervisor(node: String, dist: Listener) extends Actor {
-  import akka.actor.{OneForOneStrategy, Props}
   import akka.actor.SupervisorStrategy._
+  import akka.actor.{OneForOneStrategy, Props}
+
   import scala.concurrent.duration._
 
   override val supervisorStrategy =
@@ -49,6 +50,7 @@ class Supervisor(node: String, dist: Listener) extends Actor {
 
 object Supervisor {
   import akka.pattern.ask
+
   import scala.concurrent.duration._
   implicit val timeout = Timeout(5 seconds)
 
