@@ -15,7 +15,7 @@
 //
 // @description
 //
-package scarl
+package org.zalando.scarl
 
 import akka.actor.Actor
 import com.ericsson.otp.erlang._
