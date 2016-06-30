@@ -7,7 +7,7 @@
 >   - http://starwars.wikia.com/wiki/Scarl_system
 > 
 
-`Scarl` is the binding layer between Erlang and Scala/Akka universes. The library implements message bridge using Erlang distribution protocol and it is based on [jinterface](http://www.erlang.org/doc/apps/jinterface/jinterface_users_guide.html) for details.
+`Scarl` is the binding layer between Erlang and Scala/Akka universes. The library implements message bridge using Erlang distribution protocol and it is based on [jinterface](http://www.erlang.org/doc/apps/jinterface/jinterface_users_guide.html).
 
 The project is targeted for Scala and Erlang developers who builds a distributed systems using Actor techniques provided by these environments.
 
@@ -18,13 +18,13 @@ and associated to implicit mailbox is used to receive messages. The library defi
 
 
 
-## inspiration
+## Inspiration
 
 The development of distributed system is a complex subject. Usually, it require variety of software management layers that provides concurrency, job scheduling, request marshaling, message routing, membership, failure detection and recovery. Erlang/OTP is an indispensable technology to solve these problem. Its run-time, distribution, supervisor and fault-tolerance frameworks gives all necessary means to address listed problem. This library allows to reuse distribution assets proven by time in Scala projects.
 
 
 
-## getting started
+## Getting started
 
 
 ### getting scarl
@@ -32,90 +32,66 @@ The development of distributed system is a complex subject. Usually, it require 
 The project is Scala library, its latest version is available from `master` branch.  All development, including new features and bug fixes, take place on master branch using forking and pull requests as described in [contribution guideline](doc/contribution.md). The usage and development requires [Scala](http://www.scala-lang.org) and [sbt](http://www.scala-sbt.org). 
 
 
-### running scarl
-
-You can experiment `scarl` and message passing between Scala to Erlang actors in development console. It requires [Erlang/OTP](http://www.erlang.org/downloads) version 18.0 or later.
-
-Run the development console
-```
-sbt console
-``` 
-
-Let's spawn two simples actors in the console
-```scala
-   implicit val sys = akka.actor.ActorSystem("universe")
-   
-   //
-   // spawn scarl application and creates default node scala@127.0.0.1
-   scarl.Scarl("scala", scarl.Listener(host="127.0.0.1", cookie="nocookie"))
-   
-   //
-   // binds lambda expression to mailbox 'inbox
-   // Erlang can send message using {inbox, 'scala@127.0.0.1'} ! hello. 
-    scarl.Scarl.bind("inbox", (x: Any) => {println(x); None})
-   
-   //
-   // ping - pong example
-   // Erlang can send message using {ping, 'scala@127.0.0.1'} ! {self(), "text"}.
-   scarl.Scarl.bind("ping", 
-      (x: Any) => x match {
-         case (ref: com.ericsson.otp.erlang.OtpErlangPid, text: String) =>
-            scarl.Scarl.envelop(ref, text)
-      }
-   )
-```
-
-Open a new terminal and start Erlang console
-```
-erl -name erlang@127.0.0.1 -setcookie nocookie
-```
-
-Let's send a one-way message to Scala universe.
-```
-{inbox, 'scala@127.0.0.1'} ! hello.
-```
-As the result, you will see hello message at Scala console  
-```
-scala> 'hello
-```
-
-Let's send request / response message to Scala universe.
-```
-{ping, 'scala@127.0.0.1'} ! {self(), "hello"}.
-```
-Typing the `flush().` command at Erlang console, you will see that message is send back to Erlang actor
-```
-(erlang@127.0.0.1)2> flush().
-Shell got "hello"
-ok
-```
-
-
-### deploying scarl
+### installation
 
 The library is not integrated yet into open-source project repository. It requires a manual assembly and publish at local environment.
 ```
 sbt publish-local
 ```
 
+
 ### continue to...
 
 * Deep dive study on [distributed Erlang](http://erlang.org/doc/reference_manual/distributed.html)
-* Explore [native interface](src/main/scala/scarl/Scarl.scala) 
+* Explore [binding interface](src/main/scala/org/zalando/scarl/Scarl.scala) 
+* Learn [supervisor interface](src/main/scala/org/zalando/scarl/Supervisor.scala)
 
 
+## Supported patterns
 
-## contributing
-See [contribution guideline](doc/contribution.md) for details on PR submission.
+### Erlag binding
+[learn more](doc/binding.md)
 
-
-
-## bugs
-See [bug reporting](doc/bugs.md) for guidelines on raising issues. 
-
+### Supervisor
+[learn more](doc/supervisor.md)
 
 
-## contacts
+## How to contribute
+
+`scarl` is Apache 2.0 licensed and accepts contributions via GitHub pull requests:
+
+* Fork the repository on GitHub
+* Read the README.md for build instructions
+
+### commit message
+
+The commit message helps us to write a good release note, speed-up review process. The message should address two question what changed and why. The project follows the template defined by chapter [Contributing to a Project](http://git-scm.com/book/ch5-2.html) of Git book.
+
+>
+> Short (50 chars or less) summary of changes
+>
+> More detailed explanatory text, if necessary. Wrap it to about 72 characters or so. In some contexts, the first line is treated as the subject of an email and the rest of the text as the body. The blank line separating the summary from the body is critical (unless you omit the body entirely); tools like rebase can get confused if you run the two together.
+> 
+> Further paragraphs come after blank lines.
+> 
+> Bullet points are okay, too
+> 
+> Typically a hyphen or asterisk is used for the bullet, preceded by a single space, with blank lines in between, but conventions vary here
+>
+
+
+## Bugs
+
+If you experience any issue with the project, please let us know using [github issue](https://github.com/zalando/scarl/issue). We appreciate detailed and accurate reports that helps us to identity and replicate the issue. 
+
+* **specify** configuration of your environment, what operating system, version of runtime environments are used. 
+
+* **attach** possible logs, screen shots or exception experienced by you.
+
+* **reveal** the steps to reproduce the problem.
+
+
+## Contacts
 
 * email: dmitry.kolesnikov@zalando.fi
 * bugs: [here](https://github.com/zalando/scarl/issues) 

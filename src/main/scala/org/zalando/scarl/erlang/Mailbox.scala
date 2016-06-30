@@ -13,13 +13,15 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-package org.zalando.scarl
+package org.zalando.scarl.erlang
 
 import akka.actor.ActorRef
 import akka.pattern.pipe
-import scarl.Scarl.{Egress, Envelop}
-import scala.concurrent.{ExecutionContext, Future}
 import com.ericsson.otp.erlang._
+import org.zalando.scarl.Scarl
+import Scarl.{Egress, Envelop}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 
 trait Mailbox {

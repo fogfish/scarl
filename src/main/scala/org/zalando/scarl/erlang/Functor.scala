@@ -13,13 +13,16 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-package org.zalando.scarl
+// @description
+//
+package org.zalando.scarl.erlang
 
-import akka.actor.{ActorRef, Actor}
+import akka.actor.Actor
 import com.ericsson.otp.erlang._
-import scarl.Scarl.Envelop
+import org.zalando.scarl.Scarl
+import Scarl.Envelop
 
-class Bridge(node: OtpNode, name: String, actor: ActorRef)
+class Functor[A, B](node: OtpNode, name: String, actor: Any => Option[Envelop])
   extends Actor
   with Mailbox {
 
@@ -33,11 +36,11 @@ class Bridge(node: OtpNode, name: String, actor: ActorRef)
   def receive = {
     case 'recv =>
       recv(self)
+
     case message: OtpErlangObject =>
-      actor ! decode(message)
+      actor(decode(message)) map {send(_)}
       recv(self)
-    case x: Envelop =>
-      send(x)
+
     case _ =>
 
   }
