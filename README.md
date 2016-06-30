@@ -1,50 +1,42 @@
-# scarl
+# Scarl
 
-> 
+>
 > "The historical records will claim that the Rebel Alliance was born on Corellia.
 > That is a documented fact. But the truth is this: The Rebel Alliance was born 
 > somewhere in the Scarl system aboard Darth Vader's personal starship, the Executor."
->   - http://starwars.wikia.com/wiki/Scarl_system
+>   - [Star Wars' Scarl system](http://starwars.wikia.com/wiki/Scarl_system)
 > 
 
-`Scarl` is the binding layer between Erlang and Scala/Akka universes. The library implements message bridge using Erlang distribution protocol and it is based on [jinterface](http://www.erlang.org/doc/apps/jinterface/jinterface_users_guide.html).
+Scarl is a Scala library that acts as a binding layer to connect the Erlang and Scala/Akka universes. It's made for Scala and Erlang developers who build distributed systems using the Actors provided by these languages. Scarl uses Erlang's distribution protocol to implement message bridging and is based on [Jinterface](http://www.erlang.org/doc/apps/jinterface/jinterface_users_guide.html). It enables you to reuse distribution assets proven by time in Scala projects.
 
-The project is targeted for Scala and Erlang developers who builds a distributed systems using Actor techniques provided by these environments.
+Scarl assumes that your distributed system is built from nodes. Each node maintains a peer-to-peer connection with neighboring peers. The Jinterface chapter [Distributed Erlang](http://erlang.org/doc/reference_manual/distributed.html) provides a comprehensive description on network topology. 
 
-The library assumes that distributed system is built from nodes. Each node maintains peer-to-peer 
-connection to neighbor peers. The chapter [Distributed Erlang](http://erlang.org/doc/reference_manual/distributed.html) provides comprehensive description on the network topology. The `scarl` application is spawned with actor system using `scarl.Scarl(...)` primitive. It spawns automatically default node with given name. The message recipients are identified by registered names. The name is unique within the node
-and associated to implicit mailbox is used to receive messages. The library defines a bind primitives
-`scarl.Scarl.bind(...)` to associate either Akka actor of lambda expression with mailbox. 
+You can use the `scarl.Scarl(...)` primitive to spawn the `scarl` application with the actor system, and/or to automatically spawn a default node with a given name. Registered names identify message recipients. These registered names are unique within the node and associated to the implicit mailbox used to receive messages. 
 
-
+Scarl defines a bind primitives, `scarl.Scarl.bind(...)`, to associate either Akka actor of a Lambda expression with the implicit mailbox. 
 
 ## Inspiration
 
-The development of distributed system is a complex subject. Usually, it require variety of software management layers that provides concurrency, job scheduling, request marshaling, message routing, membership, failure detection and recovery. Erlang/OTP is an indispensable technology to solve these problem. Its run-time, distribution, supervisor and fault-tolerance frameworks gives all necessary means to address listed problem. This library allows to reuse distribution assets proven by time in Scala projects.
+Developing distributed systems usually requires a lot of work — i.e., building software management layers that provide concurrency, job scheduling, request marshaling, message routing, membership, failure detection and recovery. [Erlang/OTP](http://erlang.org/doc/) is an indispensable technology for simplifying this work, thanks to its many frameworks — for runtime, distribution, supervision and fault-tolerance, for examples. 
+
+## Getting Started
+###Requirements
+To use and develop Scarl, you need:
+- [Scala](http://www.scala-lang.org)
+- [sbt](http://www.scala-sbt.org) 
+
+### Getting Scarl
+
+The latest version of Scarl is available at its `master` branch.  All development, including new features and bug fixes, take place on the master branch using forking and pull requests as described in [these contribution guidelines](doc/contribution.md). 
 
 
+### Installing
 
-## Getting started
+The Scarl library is not integrated into an open-source project repository yet. You'll have to assemble it manually and publish it in a local environment:
 
-
-### getting scarl
-
-The project is Scala library, its latest version is available from `master` branch.  All development, including new features and bug fixes, take place on master branch using forking and pull requests as described in [contribution guideline](doc/contribution.md). The usage and development requires [Scala](http://www.scala-lang.org) and [sbt](http://www.scala-sbt.org). 
-
-
-### installation
-
-The library is not integrated yet into open-source project repository. It requires a manual assembly and publish at local environment.
 ```
 sbt publish-local
 ```
-
-
-### continue to...
-
-* Deep dive study on [distributed Erlang](http://erlang.org/doc/reference_manual/distributed.html)
-* Explore [binding interface](src/main/scala/org/zalando/scarl/Scarl.scala) 
-* Learn [supervisor interface](src/main/scala/org/zalando/scarl/Supervisor.scala)
 
 
 ## Supported patterns
@@ -54,6 +46,13 @@ sbt publish-local
 
 ### Supervisor
 [learn more](doc/supervisor.md)
+
+
+### More Information
+
+* Here's a deep-dive study on [distributed Erlang](http://erlang.org/doc/reference_manual/distributed.html)
+* Explore [binding interface](src/main/scala/org/zalando/scarl/Scarl.scala) 
+* Learn [supervisor interface](src/main/scala/org/zalando/scarl/Supervisor.scala)
 
 
 ## How to contribute
@@ -81,23 +80,20 @@ The commit message helps us to write a good release note, speed-up review proces
 
 
 ## Bugs
+If you experience any issues with Scarl, please let us know via [GitHub issues](https://github.com/zalando/scarl/issue). We appreciate detailed and accurate reports that help us to identity and replicate the issue. 
 
-If you experience any issue with the project, please let us know using [github issue](https://github.com/zalando/scarl/issue). We appreciate detailed and accurate reports that helps us to identity and replicate the issue. 
+* **Specify** the configuration of your environment. Include which operating system you use and the versions of runtime environments. 
 
-* **specify** configuration of your environment, what operating system, version of runtime environments are used. 
+* **Attach** logs, screenshots and exceptions, in possible.
 
-* **attach** possible logs, screen shots or exception experienced by you.
-
-* **reveal** the steps to reproduce the problem.
+* **Reveal** the steps you took to reproduce the problem.
 
 
 ## Contacts
 
-* email: dmitry.kolesnikov@zalando.fi
-* bugs: [here](https://github.com/zalando/scarl/issues) 
+* Email: dmitry.kolesnikov@zalando.fi
 
-
-# License
+## License
 
 Copyright 2015 Zalando SE
 
