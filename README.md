@@ -29,72 +29,8 @@ To use and develop Scarl, you need:
 
 The latest version of Scarl is available at its `master` branch.  All development, including new features and bug fixes, take place on the master branch using forking and pull requests as described in [these contribution guidelines](doc/contribution.md). 
 
-### Running Scarl
 
-You can experiment with `scarl` and message passing between Scala to Erlang actors in your development console. This requires downloading [Erlang/OTP](http://www.erlang.org/downloads) version 18.0 or later.
-
-Run the development console:
-
-```
-sbt console
-``` 
-
-Let's spawn two simple actors in the console:
-
-```scala
-   implicit val sys = akka.actor.ActorSystem("universe")
-   
-   //
-   // spawn scarl application and creates default node scala@127.0.0.1
-   scarl.Scarl("scala", scarl.Listener(host="127.0.0.1", cookie="nocookie"))
-   
-   //
-   // binds lambda expression to mailbox 'inbox
-   // Erlang can send message using {inbox, 'scala@127.0.0.1'} ! hello. 
-    scarl.Scarl.bind("inbox", (x: Any) => {println(x); None})
-   
-   //
-   // ping - pong example
-   // Erlang can send message using {ping, 'scala@127.0.0.1'} ! {self(), "text"}.
-   scarl.Scarl.bind("ping", 
-      (x: Any) => x match {
-         case (ref: com.ericsson.otp.erlang.OtpErlangPid, text: String) =>
-            scarl.Scarl.envelop(ref, text)
-      }
-   )
-```
-
-Open a new terminal, and start the Erlang console:
-
-```
-erl -name erlang@127.0.0.1 -setcookie nocookie
-```
-
-Let's send a one-way message to the Scala universe:
-
-```
-{inbox, 'scala@127.0.0.1'} ! hello.
-```
-In the result, you will see a "hello" message in the Scala console:
-
-```
-scala> 'hello
-```
-
-Let's send a request/response message to the Scala universe:
-
-```
-{ping, 'scala@127.0.0.1'} ! {self(), "hello"}.
-```
-Typing the `flush().` command in the Erlang console, you will see that the message is send back to the Erlang actor:
-
-```
-(erlang@127.0.0.1)2> flush().
-Shell got "hello"
-ok
-```
-
-### Deploying Scarl
+### Installing
 
 The Scarl library is not integrated into an open-source project repository yet. You'll have to assemble it manually and publish it in a local environment:
 
@@ -102,19 +38,56 @@ The Scarl library is not integrated into an open-source project repository yet. 
 sbt publish-local
 ```
 
+
+## Supported patterns
+
+### Erlag binding
+[learn more](doc/binding.md)
+
+### Supervisor
+[learn more](doc/supervisor.md)
+
+
 ### More Information
 
 * Here's a deep-dive study on [distributed Erlang](http://erlang.org/doc/reference_manual/distributed.html)
-* Explore [native interfaces](src/main/scala/scarl/Scarl.scala) 
+* Explore [binding interface](src/main/scala/org/zalando/scarl/Scarl.scala) 
+* Learn [supervisor interface](src/main/scala/org/zalando/scarl/Supervisor.scala)
 
-## How to Contribute
-See the [contribution guidelines](doc/contribution.md) for details on submitting pull requests.
+
+## How to contribute
+
+`scarl` is Apache 2.0 licensed and accepts contributions via GitHub pull requests:
+
+* Fork the repository on GitHub
+* Read the README.md for build instructions
+
+### commit message
+
+The commit message helps us to write a good release note, speed-up review process. The message should address two question what changed and why. The project follows the template defined by chapter [Contributing to a Project](http://git-scm.com/book/ch5-2.html) of Git book.
+
+>
+> Short (50 chars or less) summary of changes
+>
+> More detailed explanatory text, if necessary. Wrap it to about 72 characters or so. In some contexts, the first line is treated as the subject of an email and the rest of the text as the body. The blank line separating the summary from the body is critical (unless you omit the body entirely); tools like rebase can get confused if you run the two together.
+> 
+> Further paragraphs come after blank lines.
+> 
+> Bullet points are okay, too
+> 
+> Typically a hyphen or asterisk is used for the bullet, preceded by a single space, with blank lines in between, but conventions vary here
+>
+
 
 ## Bugs
-If you detect a bug, please bring it to our attention via [issues](https://github.com/zalando/scarl/issues). Please make your report detailed and accurate so that we can identify and replicate the issues you experience:
-- specify the configuration of your environment, including which operating system you're using and the versions of your runtime environments
-- attach logs, screen shots and/or exceptions if possible
-- briefly summarize the steps you took to resolve or reproduce the problem
+If you experience any issues with Scarl, please let us know via [GitHub issues](https://github.com/zalando/scarl/issue). We appreciate detailed and accurate reports that help us to identity and replicate the issue. 
+
+* **Specify** the configuration of your environment. Include which operating system you use and the versions of runtime environments. 
+
+* **Attach** logs, screenshots and exceptions, in possible.
+
+* **Reveal** the steps you took to reproduce the problem.
+
 
 ## Contacts
 

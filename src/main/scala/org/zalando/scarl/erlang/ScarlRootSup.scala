@@ -13,55 +13,56 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-// @doc
-//
-package org.zalando.scarl
+// @description
+//  scarl application root supervisor
+package org.zalando.scarl.erlang
 
-import akka.actor.{ActorSystem, ActorRef, Actor}
+import akka.actor._
+import org.zalando.scarl._
 import akka.util.Timeout
-import com.ericsson.otp.erlang.OtpNode
-import scarl.Scarl.Envelop
+import scala.concurrent.Await
 
 
-class NodeSup(id: String, cookie: String) extends Actor {
-  import akka.actor.{OneForOneStrategy, Props}
+
+class ScarlRootSup(node: String, dist: Listener) extends Actor {
   import akka.actor.SupervisorStrategy._
+  import akka.actor.{OneForOneStrategy, Props}
+
   import scala.concurrent.duration._
 
-  var node: OtpNode = _
   override val supervisorStrategy =
     OneForOneStrategy(maxNrOfRetries = 60, withinTimeRange = 1 minute) {
       case _: Exception => Restart
     }
 
   override def preStart() = {
-    node = new OtpNode(id, cookie)
+    spawn("default", node)
   }
 
   def receive = {
-    case ('bind, mbox: String, actor: ActorRef) =>
-      sender() ! context.actorOf(Props(new Bridge(node, mbox, actor)))
-    case ('bind, mbox: String, actor: (Any => Option[Envelop])) =>
-      sender() ! context.actorOf(Props(new Functor(node, mbox, actor)))
+    case ('spawn, id: String) =>
+      sender() ! spawn(id, id)
+  }
+
+  private def spawn(name: String, id: String) = {
+    context.actorOf(Props(new NodeSup(id + "@" + dist.host, dist.cookie)), name)
   }
 }
 
 
-object NodeSup {
+object ScarlRootSup {
   import akka.pattern.ask
-  import scala.concurrent.duration._
-  import scala.concurrent.Await
 
+  import scala.concurrent.duration._
   implicit val timeout = Timeout(5 seconds)
 
-
-  def bind(node: String, name: String, actor: Any)(implicit sys: ActorSystem): ActorRef = {
+  def spawn(id: String)(implicit sys: ActorSystem): ActorRef = {
     implicit val cx = sys.dispatcher
-    val req = sys.actorSelection("/user/" + Scarl.uid + "/" + node)
+    val req = sys.actorSelection("/user/" + Scarl.uid)
       .resolveOne
       .flatMap {
         sup: ActorRef => {
-          ask(sup, ('bind, name, actor)).mapTo[ActorRef]
+          ask(sup, ('spawn, id)).mapTo[ActorRef]
         }
       }
     Await.result(req, timeout.duration)

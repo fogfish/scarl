@@ -15,8 +15,9 @@
 //
 package org.zalando.scarl
 
-import akka.actor.{ActorRef, Props, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import com.ericsson.otp.erlang.OtpErlangPid
+import org.zalando.scarl.erlang.{NodeSup, ScarlRootSup}
 
 
 /** distribution listener interface specification
@@ -65,7 +66,7 @@ object Scarl {
     * @return
     */
   def apply(node: String, dist: Listener = Listener())(implicit sys: ActorSystem): ActorRef = {
-    sys.actorOf(Props(new Supervisor(node, dist)), uid)
+    sys.actorOf(Props(new ScarlRootSup(node, dist)), uid)
   }
 
 
@@ -76,7 +77,7 @@ object Scarl {
     * @return
     */
   def spawn(node: String)(implicit sys: ActorSystem) = {
-    Supervisor.spawn(node)
+    ScarlRootSup.spawn(node)
   }
 
 
