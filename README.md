@@ -41,7 +41,7 @@ sbt publish-local
 
 ## Supported patterns
 
-### Erlag binding
+### Erlang binding
 [learn more](doc/binding.md)
 
 ### Supervisor
