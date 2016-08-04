@@ -28,8 +28,8 @@ class SupervisorSpec extends UnitSpec {
     implicit val sys = ActorSystem("test-sup")
     sys.supervisor(Supervisor.Supervisor("root", Props[SupA]))
 
-    Await.result(Supervisor.resolve("root/a"), Duration.Inf)
-    Await.result(Supervisor.resolve("root/b"), Duration.Inf)
+    Supervisor.resolve(sys.actorSelection("/user/root/a"))
+    Supervisor.resolve(sys.actorSelection("/user/root/b"))
 
     Await.result(sys.terminate(), Duration.Inf)
   }
@@ -39,7 +39,7 @@ class SupervisorSpec extends UnitSpec {
     val sup = sys.supervisor(Supervisor.Supervisor("root", Props[SupC]))
 
     Supervisor.spawn(sup, Supervisor.Worker("a", Props[WorkerA]))
-    Await.result(Supervisor.resolve("root/a"), Duration.Inf)
+    Supervisor.resolve(sys.actorSelection("/user/root/a"))
 
     Await.result(sys.terminate(), Duration.Inf)
   }
@@ -49,7 +49,7 @@ class SupervisorSpec extends UnitSpec {
     implicit val sys = ActorSystem("test-sup")
     sys.supervisor(Supervisor.Supervisor("root", Props[SupB]))
 
-    val a = Await.result(Supervisor.resolve("root/a"), Duration.Inf)
+    val a = Supervisor.resolve(sys.actorSelection("/user/root/a")).get
     a ! 'fail
     Await.result(a ? Identify("") , Duration.Inf) match {
       case ActorIdentity(_, Some(x)) =>
@@ -80,7 +80,7 @@ class SupervisorSpec extends UnitSpec {
     implicit val sys = ActorSystem("test-sup")
     sys.supervisor(Supervisor.Supervisor("root", Props[SupB]))
 
-    val a = Await.result(Supervisor.resolve("root/a"), Duration.Inf)
+    val a = Supervisor.resolve(sys.actorSelection("/user/root/a")).get
     a ! 'fail
     a ! 'fail
     a ! 'fail

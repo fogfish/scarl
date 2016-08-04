@@ -21,6 +21,7 @@ import akka.pattern.ask
 import scala.annotation.tailrec
 import scala.concurrent._
 import scala.concurrent.duration._
+import scala.util.{Try, Success, Failure}
 
 /**
   *
@@ -28,16 +29,49 @@ import scala.concurrent.duration._
 object Supervisor {
   implicit val t: akka.util.Timeout = 60 seconds
 
-  /** resolve path to actor reference
-    */
-  def resolve(path: String)(implicit sys: ActorSystem): Future[ActorRef] = {
-    sys.actorSelection("/user/" + path).resolveOne()
-  }
-
   /** spawn children
     */
   def spawn(sup: ActorRef, spec: Instance): Future[ActorRef] = {
     sup.ask(Spawn(spec)).mapTo[ActorRef]
+  }
+
+  /** synchronously resolve actor selection
+    */
+  def resolve(selector: ActorSelection): Option[ActorRef] = {
+    resolve(selector, 5 seconds)
+  }
+
+  def resolve(selector: ActorSelection, t: FiniteDuration): Option[ActorRef] = {
+    retry(t){Await.result(selector.resolveOne(t), t)}
+  }
+
+  /** lookup children
+    */
+  def child(sup: ActorRef, id: String)(implicit sys: ActorSystem): Option[ActorRef] = {
+    val f = sys.actorSelection(sup.path / id).resolveOne(5 seconds)
+    Try {Await.result(f, 5 seconds)} match {
+      case Success(x) => Some(x)
+      case _ => None
+    }
+  }
+
+  /** time constrained retry (time in milliseconds)
+    *
+    */
+  private
+  def retry[T](t: FiniteDuration)(fn: => T): Option[T] = {
+    val t0 = System.currentTimeMillis
+
+    @annotation.tailrec
+    def retryUntil[T](deadline: Long, fn: => T): Option[T] = {
+      Try { fn } match {
+        case Success(x) => Some(x)
+        case _ if deadline < System.currentTimeMillis => retryUntil(deadline, fn)
+        case Failure(e) => None
+      }
+    }
+
+    retryUntil(t0 + t.toMillis, fn)
   }
 
 
@@ -69,7 +103,7 @@ object Supervisor {
   class SystemSupervisor(val sys: ActorSystem) extends scala.AnyRef {
     /** sequentially spawn root supervisor and it children
       */
-    def supervisor(spec: Supervisor)(implicit sys: ActorSystem): ActorRef = {
+    def supervisor(spec: Supervisor): ActorRef = {
       import akka.pattern.ask
       implicit val t: akka.util.Timeout = 60 seconds
 
@@ -177,6 +211,12 @@ class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
   protected
   def strategyAllForOne(maxN: Int, maxT: Duration) =
     AllForOneStrategy(maxNrOfRetries = maxN, withinTimeRange = maxT) {
+      case _: Exception => Restart
+    }
+
+  protected
+  def strategyFailSafe() =
+    OneForOneStrategy(maxNrOfRetries = 1000000, withinTimeRange = 1 seconds) {
       case _: Exception => Restart
     }
 }
