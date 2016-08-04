@@ -1,6 +1,8 @@
+organization := "org.zalando"
+
 name    := "scarl"
 
-version := "0.1.0"
+version := "0.1.1"
 
 scalaVersion := "2.11.8"
 
@@ -19,5 +21,31 @@ lazy val root = (project in file(".")).
       "-Xmx1G"
     )
   )
+
+//
+//
+pomIncludeRepository := { _ => false }
+
+pomExtra := (
+  <url>https://github.com/zalando/scarl</url>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <url>https://github.com/zalando/scarl</url>
+    <connection>scm:git:git@github.com:zalando//scarl.git</connection>
+  </scm>
+  <developers>
+    <developer>
+      <name>Dmitry Kolesnikov</name>
+      <email>dmitry.kolesnikov@zalando.fi</email>
+      <organization>Zalando SE</organization>
+    </developer>
+  </developers>)
+
 
 
