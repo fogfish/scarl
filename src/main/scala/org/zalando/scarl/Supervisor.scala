@@ -90,7 +90,9 @@ class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
       sender() ! Supervisor.Config
       stay
 
-    case _ =>
+    case x: Any =>
+      println("==> " + sender())
+      println(x)
       throw new Supervisor.UnknownMessage
   }
 
@@ -123,8 +125,7 @@ class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
 
   private
   def spawn(specs: Supervisor.Specs): ActorRef = {
-    val clazz = classOf[Supervisor]
-    if (specs.props.actorClass() == clazz) {
+    if (classOf[Supervisor].isAssignableFrom(specs.props.actorClass())) {
       log.info(s"spawn supervisor ${specs.id}")
       context.watch(context.actorOf(specs.props, specs.id))
     } else {
