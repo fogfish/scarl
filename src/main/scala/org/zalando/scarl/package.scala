@@ -117,7 +117,6 @@ package object scarl {
             case None if deadline > System.currentTimeMillis =>
               retryUntil(deadline, fn, fn)
             case x: Option[T] =>
-              println("++++ " + x)
               x
           }
       }
