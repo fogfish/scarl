@@ -158,6 +158,17 @@ class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
     OneForOneStrategy(maxNrOfRetries = 1000000, withinTimeRange = 1 seconds) {
       case _: Exception => Restart
     }
+
+  protected
+  def actorOf(props: Props): ActorRef = {
+    // todo: suspend supervisor FSM until child are ready
+    context.watch(context.actorOf(props))
+  }
+
+  protected
+  def actorOf(props: Props, id: String): ActorRef = {
+    context.watch(context.actorOf(props))
+  }
 }
 
 //
