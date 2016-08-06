@@ -33,6 +33,10 @@ object Supervisor {
     sup.ask(Spawn(spec)).mapTo[ActorRef]
   }
 
+  def actorOf(sup: Future[ActorRef], spec: Specs)(implicit ec: ExecutionContext): Future[ActorRef] = {
+    sup flatMap{actorOf(_, spec)}
+  }
+
   /** specification of children process(es) */
   case class Specs(id: String, props: Props)
 
@@ -56,7 +60,11 @@ object Supervisor {
 // state definition
 private[scarl] sealed trait State
 private[scarl] case object Nothing extends State
-private[scarl] case class Init(head: Option[ActorRef], list: Seq[Supervisor.Specs]) extends State
+private[scarl] case class Init(
+  head: Option[ActorRef],
+  list: Seq[Supervisor.Specs],
+  refs: List[ActorRef]
+) extends State
 
 //
 //
@@ -71,28 +79,25 @@ class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
   val shutdown = false
 
   //
-  startWith(Supervisor.Config, Init(None, specs))
+  startWith(Supervisor.Config, Init(None, specs, List(context.parent)))
 
   //
   when(Supervisor.Config) {
-    case Event(Supervisor.Spawn, Init(_, Nil)) =>
-      context.parent ! ActorIdentity(None, Some(self))
+    case Event(Supervisor.Spawn, Init(_, Nil, refs)) =>
+      refs foreach {_ ! ActorIdentity(None, Some(self))}
       goto(Supervisor.Active) using Nothing
 
-    case Event(Supervisor.Spawn, Init(_, x :: xs)) =>
-      stay using Init(Some(spawn(x)), xs)
+    case Event(Supervisor.Spawn, state @ Init(_, x :: xs, _)) =>
+      stay using state.copy(head = Some(spawn(x)), list = xs)
 
-    case Event(ActorIdentity(_, pid), Init(head, list)) if pid == head =>
+    case Event(ActorIdentity(_, pid), state @ Init(head, _, _)) if pid == head =>
       self ! Supervisor.Spawn
-      stay using Init(None, list)
+      stay using state.copy(head = None)
 
-    case Event(Supervisor.Check, _) =>
-      sender() ! Supervisor.Config
-      stay
+    case Event(Supervisor.Check, state @ Init(_, _, refs)) =>
+      stay using state.copy(refs = sender() :: refs)
 
     case x: Any =>
-      println("==> " + sender())
-      println(x)
       throw new Supervisor.UnknownMessage
   }
 
@@ -109,7 +114,7 @@ class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
       stay
 
     case Event(Supervisor.Check, _) =>
-      sender() ! Supervisor.Active
+      sender() ! ActorIdentity(None, Some(self))
       stay
 
     case Event(Supervisor.Spawn(spec), Nothing) =>
