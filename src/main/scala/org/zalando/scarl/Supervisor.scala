@@ -18,10 +18,8 @@ package org.zalando.scarl
 import akka.actor._
 import akka.actor.SupervisorStrategy._
 import akka.pattern.ask
-import scala.annotation.tailrec
 import scala.concurrent._
 import scala.concurrent.duration._
-import scala.util.{Try, Success, Failure}
 
 /**
   *
@@ -29,65 +27,24 @@ import scala.util.{Try, Success, Failure}
 object Supervisor {
   implicit val t: akka.util.Timeout = 60 seconds
 
-  /** spawn children
+  /** spawn a new children at supervisor context
     */
-  def spawn(sup: ActorRef, spec: Instance): Future[ActorRef] = {
+  def actorOf(sup: ActorRef, spec: Specs): Future[ActorRef] = {
     sup.ask(Spawn(spec)).mapTo[ActorRef]
   }
 
-  /** synchronously resolve actor selection
-    */
-  def resolve(selector: ActorSelection): Option[ActorRef] = {
-    resolve(selector, 5 seconds)
+  def actorOf(sup: Future[ActorRef], spec: Specs)(implicit ec: ExecutionContext): Future[ActorRef] = {
+    sup flatMap{actorOf(_, spec)}
   }
 
-  def resolve(selector: ActorSelection, t: FiniteDuration): Option[ActorRef] = {
-    retry(t){Await.result(selector.resolveOne(t), t)}
-  }
-
-  /** lookup children
-    */
-  def child(sup: ActorRef, id: String)(implicit sys: ActorSystem): Option[ActorRef] = {
-    val f = sys.actorSelection(sup.path / id).resolveOne(5 seconds)
-    Try {Await.result(f, 5 seconds)} match {
-      case Success(x) => Some(x)
-      case _ => None
-    }
-  }
-
-  /** time constrained retry (time in milliseconds)
-    *
-    */
-  private
-  def retry[T](t: FiniteDuration)(fn: => T): Option[T] = {
-    val t0 = System.currentTimeMillis
-
-    @annotation.tailrec
-    def retryUntil[T](deadline: Long, fn: => T): Option[T] = {
-      Try { fn } match {
-        case Success(x) => Some(x)
-        case _ if deadline < System.currentTimeMillis => retryUntil(deadline, fn)
-        case Failure(e) => None
-      }
-    }
-
-    retryUntil(t0 + t.toMillis, fn)
-  }
-
-
-  /** specification of children */
-  sealed trait Instance {
-    def id: String
-    def props: Props
-  }
-  case class Worker(id: String, props: Props) extends Instance
-  case class Supervisor(id: String, props: Props) extends Instance
+  /** specification of children process(es) */
+  case class Specs(id: String, props: Props)
 
   /** primitives */
   private[scarl] sealed trait Message
   private[scarl] case object Spawn extends Message
   private[scarl] case object Check extends Message
-  private[scarl] case class Spawn(spec: Instance) extends Message
+  private[scarl] case class Spawn(spec: Specs) extends Message
 
   /** failures */
   class RestartLimitExceeded extends RuntimeException
@@ -97,67 +54,50 @@ object Supervisor {
   sealed trait SID
   case object Config extends SID // Supervisor is busy to spawn child actors
   case object Active extends SID // Supervisor is active all actors are ready
-
-  //
-  implicit
-  class SystemSupervisor(val sys: ActorSystem) extends scala.AnyRef {
-    /** sequentially spawn root supervisor and it children
-      */
-    def supervisor(spec: Supervisor): ActorRef = {
-      import akka.pattern.ask
-      implicit val t: akka.util.Timeout = 60 seconds
-
-      @tailrec
-      def wait(sup: ActorRef): ActorRef = {
-        Await.result(sup ? Check, Duration.Inf) match {
-          case Config =>
-            wait(sup)
-          case Active =>
-            sup
-        }
-      }
-      wait(sys.actorOf(spec.props, spec.id))
-    }
-  }
 }
 
 //
 // state definition
 private[scarl] sealed trait State
 private[scarl] case object Nothing extends State
-private[scarl] case class Init(head: Option[ActorRef], list: Seq[Supervisor.Instance]) extends State
+private[scarl] case class Init(
+  head: Option[ActorRef],
+  list: Seq[Supervisor.Specs],
+  refs: List[ActorRef]
+) extends State
 
 //
 //
 abstract
 class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
-  /** specification of services to spawn*/
-  def init: Seq[Supervisor.Instance]
+
+  /** specification of child services to spawn
+    */
+  def specs: Seq[Supervisor.Specs]
 
   //
   val shutdown = false
 
   //
-  startWith(Supervisor.Config, Init(None, init))
+  startWith(Supervisor.Config, Init(None, specs, List(context.parent)))
 
   //
   when(Supervisor.Config) {
-    case Event(Supervisor.Spawn, Init(_, Nil)) =>
-      context.parent ! ActorIdentity(None, Some(self))
+    case Event(Supervisor.Spawn, Init(_, Nil, refs)) =>
+      refs foreach {_ ! ActorIdentity(None, Some(self))}
       goto(Supervisor.Active) using Nothing
 
-    case Event(Supervisor.Spawn, Init(_, x :: xs)) =>
-      stay using Init(Some(spawn(x)), xs)
+    case Event(Supervisor.Spawn, state @ Init(_, x :: xs, _)) =>
+      stay using state.copy(head = Some(spawn(x)), list = xs)
 
-    case Event(ActorIdentity(_, pid), Init(head, list)) if pid == head =>
+    case Event(ActorIdentity(_, pid), state @ Init(head, _, _)) if pid == head =>
       self ! Supervisor.Spawn
-      stay using Init(None, list)
+      stay using state.copy(head = None)
 
-    case Event(Supervisor.Check, _) =>
-      sender() ! Supervisor.Config
-      stay
+    case Event(Supervisor.Check, state @ Init(_, _, refs)) =>
+      stay using state.copy(refs = sender() :: refs)
 
-    case _ =>
+    case x: Any =>
       throw new Supervisor.UnknownMessage
   }
 
@@ -174,7 +114,7 @@ class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
       stay
 
     case Event(Supervisor.Check, _) =>
-      sender() ! Supervisor.Active
+      sender() ! ActorIdentity(None, Some(self))
       stay
 
     case Event(Supervisor.Spawn(spec), Nothing) =>
@@ -189,18 +129,17 @@ class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
   }
 
   private
-  def spawn(spec: Supervisor.Instance): ActorRef =
-    spec match {
-      case Supervisor.Worker(id, props) =>
-        log.info(s"spawn worker $id")
-        val pid = context.watch(context.actorOf(props, id))
-        pid ! Identify(id)
-        pid
-
-      case Supervisor.Supervisor(id, props) =>
-        log.info(s"spawn supervisor $id")
-        context.watch(context.actorOf(props, id))
+  def spawn(specs: Supervisor.Specs): ActorRef = {
+    if (classOf[Supervisor].isAssignableFrom(specs.props.actorClass())) {
+      log.info(s"spawn supervisor ${specs.id}")
+      context.watch(context.actorOf(specs.props, specs.id))
+    } else {
+      log.info(s"spawn worker ${specs.id}")
+      val pid = context.watch(context.actorOf(specs.props, specs.id))
+      pid ! Identify(specs.id)
+      pid
     }
+  }
 
   protected
   def strategyOneForOne(maxN: Int, maxT: Duration) =
@@ -219,6 +158,17 @@ class Supervisor extends FSM[Supervisor.SID, State] with ActorLogging {
     OneForOneStrategy(maxNrOfRetries = 1000000, withinTimeRange = 1 seconds) {
       case _: Exception => Restart
     }
+
+  protected
+  def actorOf(props: Props): ActorRef = {
+    // todo: suspend supervisor FSM until child are ready
+    context.watch(context.actorOf(props))
+  }
+
+  protected
+  def actorOf(props: Props, id: String): ActorRef = {
+    context.watch(context.actorOf(props))
+  }
 }
 
 //

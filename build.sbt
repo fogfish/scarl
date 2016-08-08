@@ -2,7 +2,7 @@ organization := "org.zalando"
 
 name    := "scarl"
 
-version := "0.1.1"
+version := "0.1.4"
 
 scalaVersion := "2.11.8"
 

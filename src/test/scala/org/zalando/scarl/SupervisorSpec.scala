@@ -16,79 +16,110 @@
 package org.zalando.scarl
 
 import akka.actor._
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import akka.pattern.ask
+import org.zalando.scarl.Supervisor._
+
+import scala.util.Success
 
 class SupervisorSpec extends UnitSpec {
-  import org.zalando.scarl.Supervisor.SystemSupervisor
-  implicit val t: akka.util.Timeout = 5 seconds
+  import org.zalando.scarl.ScarlSupervisor
+
+  implicit val t: akka.util.Timeout = 5.seconds
 
   "Supervisor" should "spawn actors" in {
     implicit val sys = ActorSystem("test-sup")
-    sys.supervisor(Supervisor.Supervisor("root", Props[SupA]))
+    implicit val fec = sys.dispatcher
 
-    Supervisor.resolve(sys.actorSelection("/user/root/a"))
-    Supervisor.resolve(sys.actorSelection("/user/root/b"))
+    val sup = sys.rootSupervisor(Specs("root", Props[SupA]))
+    await(sup)
 
-    Await.result(sys.terminate(), Duration.Inf)
+    await(sys.actorSelection("/user/root/a").resolve())
+    await(sys.actorSelection("/user/root/b").resolve())
+
+    await(sys.terminate())
   }
 
   "Supervisor" should "spawn dynamic actors" in {
     implicit val sys = ActorSystem("test-sup")
-    val sup = sys.supervisor(Supervisor.Supervisor("root", Props[SupC]))
+    implicit val fec = sys.dispatcher
 
-    Supervisor.spawn(sup, Supervisor.Worker("a", Props[WorkerA]))
-    Supervisor.resolve(sys.actorSelection("/user/root/a"))
+    val sup = sys.rootSupervisor(Specs("root", Props[SupC]))
 
-    Await.result(sys.terminate(), Duration.Inf)
+    Supervisor.actorOf(sup, Specs("a", Props[WorkerA]))
+    await(sys.actorSelection("/user/root/a").resolve())
+
+    await(sys.terminate())
   }
 
 
   "Supervisor" should "re-spawn actors" in {
     implicit val sys = ActorSystem("test-sup")
-    sys.supervisor(Supervisor.Supervisor("root", Props[SupB]))
+    implicit val fec = sys.dispatcher
 
-    val a = Supervisor.resolve(sys.actorSelection("/user/root/a")).get
-    a ! 'fail
-    Await.result(a ? Identify("") , Duration.Inf) match {
+    sys.rootSupervisor(Specs("root", Props[SupB]))
+
+    val a = await(sys.actorSelection("/user/root/a").resolve())
+    val f = sys.actorSelection("/user/root/a").resolve()
+        .map {failure _}
+        .flatMap {_ ? Identify("")}
+
+    await(f) match {
       case ActorIdentity(_, Some(x)) =>
         x shouldBe a
     }
 
-    Await.result(sys.terminate(), Duration.Inf)
+    await(sys.terminate())
   }
 
 
   "Supervisor" should "re-spawn dynamic actors" in {
     implicit val sys = ActorSystem("test-sup")
-    val sup = sys.supervisor(Supervisor.Supervisor("root", Props[SupC]))
+    implicit val fec = sys.dispatcher
 
-    val a = Await.result(Supervisor.spawn(sup, Supervisor.Worker("a", Props[WorkerA])), Duration.Inf)
-    a ! 'fail
-    Await.result(a ? Identify(""), Duration.Inf) match {
+    val sup = sys.rootSupervisor(Specs("root", Props[SupC]))
+    val a   = Supervisor.actorOf(sup, Specs("a", Props[WorkerA]))
+
+    val f = sys.actorSelection("/user/root/a").resolve()
+      .map {failure _}
+      .flatMap {_ ? Identify("")}
+
+    await(f) match {
       case ActorIdentity(_, Some(x)) =>
-        x shouldBe a
+        x shouldBe await(a)
     }
 
-    Await.result(sys.terminate(), Duration.Inf)
+    await(sys.terminate())
   }
 
 
 
   "Supervisor" should "terminate actor system" in {
     implicit val sys = ActorSystem("test-sup")
-    sys.supervisor(Supervisor.Supervisor("root", Props[SupB]))
+    implicit val fec = sys.dispatcher
 
-    val a = Supervisor.resolve(sys.actorSelection("/user/root/a")).get
-    a ! 'fail
-    a ! 'fail
-    a ! 'fail
+    val sup = sys.rootSupervisor(Specs("root", Props[SupB]))
+    await( sup )
 
-    Await.result(sys.whenTerminated, Duration.Inf)
+    val x = sys.actorSelection("/user/root/a").resolve()
+      .map {failure _}
+      .map {failure _}
+      .map {failure _}
+      .flatMap {
+        _ => sys.actorSelection("/user/root/a").resolve()
+      }
+    an[Throwable] should be thrownBy await(x)
+
+    await(sys.whenTerminated)
   }
 
+  private def await[T](f: Future[T]): T = Await.result(f, Duration.Inf)
 
+  private def failure(x: ActorRef) = {
+    x ! 'fail
+    x
+  }
 }
 
 //
@@ -97,9 +128,9 @@ class SupA extends RootSupervisor {
     override
     val supervisorStrategy = strategyOneForOne(2, 1 minute)
 
-    def init = Seq(
-      Supervisor.Worker("a", Props[WorkerA]),
-      Supervisor.Worker("b", Props[WorkerA])
+    def specs = Seq(
+      Specs("a", Props[WorkerA]),
+      Specs("b", Props[WorkerA])
     )
 }
 
@@ -116,9 +147,9 @@ class SupB extends RootSupervisor {
   override
   val supervisorStrategy = strategyOneForOne(2, 1 minute)
 
-  def init = Seq(
-    Supervisor.Worker("a", Props[WorkerB]),
-    Supervisor.Worker("b", Props[WorkerB])
+  def specs = Seq(
+    Specs("a", Props[WorkerB]),
+    Specs("b", Props[WorkerB])
   )
 }
 
@@ -136,6 +167,6 @@ class SupC extends RootSupervisor {
   override
   val supervisorStrategy = strategyOneForOne(2, 1 minute)
 
-  def init = Seq()
+  def specs = Seq()
 }
 
